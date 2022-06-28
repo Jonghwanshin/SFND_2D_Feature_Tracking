@@ -13,12 +13,28 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
 
     if (matcherType.compare("MAT_BF") == 0)
     {
-        int normType = cv::NORM_HAMMING;
+        int normType = (descriptorType.compare("DES_BINARY") == 0) ? cv::NORM_HAMMING : cv::NORM_L2;
         matcher = cv::BFMatcher::create(normType, crossCheck);
     }
     else if (matcherType.compare("MAT_FLANN") == 0)
     {
-        // ...
+        if(descriptorType.compare("DES_BINARY") == 0) 
+        {
+            matcher = cv::FlannBasedMatcher::create();
+        }
+        else if(descriptorType.compare("DES_HOG") == 0) 
+        {
+            //const cv::Ptr<cv::flann::IndexParams>& indexParams = cv::makePtr<cv::flann::LshIndexParams>(12, 20, 2);
+            matcher = cv::FlannBasedMatcher::create();
+        }
+        else
+        {
+            throw invalid_argument("descriptorType Invalid, Available Matchers: DES_BINARY, DES_HOG");
+        }
+    } 
+    else
+    {
+        throw invalid_argument("matcherType Invalid, Available Matchers: MAT_BF, MAT_FLANN");
     }
 
     // perform matching task
@@ -28,9 +44,21 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
         matcher->match(descSource, descRef, matches); // Finds the best match for each descriptor in desc1
     }
     else if (selectorType.compare("SEL_KNN") == 0)
-    { // k nearest neighbors (k=2)
+    { 
+        // k nearest neighbors (k=2)
+        vector<vector<cv::DMatch>> knn_matches;
+        matcher->knnMatch(descSource, descRef, knn_matches, 2);
 
-        // ...
+        // added descriptor distance ratio test
+        double minDescDistRatio = 0.8;
+        for (auto it = knn_matches.begin(); it != knn_matches.end(); ++it)
+        {
+
+            if ((*it)[0].distance < minDescDistRatio * (*it)[1].distance)
+            {
+                matches.push_back((*it)[0]);
+            }
+        }
     }
 }
 
@@ -48,10 +76,25 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
 
         extractor = cv::BRISK::create(threshold, octaves, patternScale);
     }
+    else if (descriptorType.compare("FAST") == 0)
+    {
+        extractor = cv::FastFeatureDetector::create();
+    }
+    else if (descriptorType.compare("ORB") == 0)
+    {
+        extractor = cv::ORB::create();
+    }
+    else if (descriptorType.compare("AKAZE") == 0)
+    {
+        extractor = cv::AKAZE::create();
+    }
+    else if (descriptorType.compare("SIFT") == 0)
+    {
+        extractor = cv::SIFT::create();
+    }
     else
     {
-
-        //...
+        throw invalid_argument("Descriptor Name" + descriptorType + " Invalid, Available Detectors: FAST, BRISK, ORB, AKAZE, SIFT");
     }
 
     // perform feature description
@@ -81,7 +124,6 @@ void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool b
     // add corners to result vector
     for (auto it = corners.begin(); it != corners.end(); ++it)
     {
-
         cv::KeyPoint newKeyPoint;
         newKeyPoint.pt = cv::Point2f((*it).x, (*it).y);
         newKeyPoint.size = blockSize;
@@ -99,5 +141,95 @@ void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool b
         cv::namedWindow(windowName, 6);
         imshow(windowName, visImage);
         cv::waitKey(0);
+    }
+}
+
+void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
+{
+     // Detector parameters
+    int blockSize = 2; // for every pixel, a blockSize × blockSize neighborhood is considered
+    int apertureSize = 3; // aperture parameter for Sobel operator (must be odd)
+    int minResponse = 100; // minimum value for a corner in the 8bit scaled response matrix
+    double k = 0.04; // Harris parameter (see equation for details)
+
+    // Detect Harris corners and normalize output
+    cv::Mat dst, dst_norm, dst_norm_scaled;
+    dst = cv::Mat::zeros(img.size(), CV_32FC1 );
+    cv::cornerHarris(img, dst, blockSize, apertureSize, k, cv::BORDER_DEFAULT ); 
+    cv::normalize( dst, dst_norm, 0, 255, cv::NORM_MINMAX, CV_32FC1, cv::Mat() );
+    cv::convertScaleAbs( dst_norm, dst_norm_scaled );
+
+    // TODO: Your task is to locate local maxima in the Harris response matrix 
+    // and perform a non-maximum suppression (NMS) in a local neighborhood around 
+    // each maximum. The resulting coordinates shall be stored in a list of keypoints 
+    // of the type `vector<cv::KeyPoint>`.
+    // loop over all pixels in the corner image
+
+    // define size of sliding window
+    int sw_size = 7;                  // should be odd so we can center it on a pixel and have symmetry in all directions
+    int sw_dist = floor(sw_size / 2); // number of pixels to left/right and top/down to investigate
+    
+    for (int r = sw_dist; r < dst_norm.rows - sw_dist - 1; r++) // rows
+    {
+        for (int c = sw_dist; c < dst_norm.cols - sw_dist - 1; c++) // cols
+        {
+            // loop over all pixels within sliding window around the current pixel
+            unsigned int max_val{0}; // keeps track of strongest response
+            for (int rs = r - sw_dist; rs <= r + sw_dist; rs++)
+            {
+                for (int cs = c - sw_dist; cs <= c + sw_dist; cs++)
+                {
+                    // check wether max_val needs to be updated
+                    unsigned int new_val = dst_norm.at<unsigned int>(rs, cs);
+                    max_val = max_val < new_val ? new_val : max_val;
+                }
+            }
+
+            // check wether current pixel is local maximum
+            if (dst_norm.at<unsigned int>(r, c) == max_val)
+                keypoints.push_back(cv::KeyPoint(cv::Point2f(c, r), max_val));
+        }
+    }
+}
+
+void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std::string detectorType, bool bVis)
+{
+    cv::Ptr<cv::FeatureDetector> extractor;
+
+    if (detectorType.compare("FAST") == 0)
+    {
+        extractor = cv::FastFeatureDetector::create();
+    }
+    else if (detectorType.compare("BRISK") == 0)
+    {
+        extractor = cv::BRISK::create();
+    }
+    else if (detectorType.compare("ORB") == 0)
+    {
+        extractor = cv::ORB::create();
+    }
+    else if (detectorType.compare("AKAZE") == 0)
+    {
+        extractor = cv::AKAZE::create();
+    }
+    else if (detectorType.compare("SIFT") == 0)
+    {
+        extractor = cv::SIFT::create();
+    }
+    else
+    {
+        throw invalid_argument("Detector Name" + detectorType + "Invalid, Available Detectors: FAST, BRISK, ORB, AKAZE, SIFT");
+    }
+
+    extractor->detect(img, keypoints);
+
+    if(bVis) 
+    {
+        cv::Mat visImage = img.clone();
+        cv::drawKeypoints(img, keypoints, visImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        string windowName = "Keypoint Detection Results of " + detectorType + "Detector";
+        cv::namedWindow(windowName);
+        cv::imshow(windowName, visImage);
+        cv::waitKey(0); // wait for key to be pressed
     }
 }
