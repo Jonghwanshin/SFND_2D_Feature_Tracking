@@ -37,7 +37,8 @@ int main(int argc, const char *argv[])
 
     // misc
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
-    vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
+    //vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
+    RingBuffer<DataFrame> dataBuffer = RingBuffer<DataFrame>(dataBufferSize);
     bool bVis = false;            // visualize results
 
     /* MAIN LOOP OVER ALL IMAGES */
@@ -62,10 +63,11 @@ int main(int argc, const char *argv[])
         // push image into data frame buffer
         DataFrame frame;
         frame.cameraImg = imgGray;
-        if(dataBuffer.size() >= dataBufferSize) /* remove the front element if the buffer is full */
-            dataBuffer.erase(dataBuffer.begin());
+        dataBuffer.push(frame);
+        // if(dataBuffer.size() >= dataBufferSize) /* remove the front element if the buffer is full */
+        //     dataBuffer.erase(dataBuffer.begin());
 
-        dataBuffer.push_back(frame); 
+        // dataBuffer.push_back(frame); 
 
         //// EOF STUDENT ASSIGNMENT
         cout << "#1 : LOAD IMAGE INTO BUFFER done" << endl;
@@ -83,6 +85,10 @@ int main(int argc, const char *argv[])
         if (detectorType.compare("SHITOMASI") == 0)
         {
             detKeypointsShiTomasi(keypoints, imgGray, false);
+        }
+        else if(detectorType.compare("HARRIS") == 0) 
+        {
+            detKeypointsHarris(keypoints, imgGray, false);
         }
         else
         {
@@ -249,9 +255,12 @@ int evalImages(string detectorType="SHITOMASI", string descriptorType="ORB")
         {
             detKeypointsShiTomasi(keypoints, imgGray, false);
         }
+        else if(detectorType.compare("HARRIS") == 0) 
+        {
+            detKeypointsHarris(keypoints, imgGray, false);
+        }
         else
         {
-            //use modern keypoints detector
             detKeypointsModern(keypoints, imgGray, detectorType, false);
         }
         
@@ -333,7 +342,7 @@ int evalPerformance()
     {
         for(auto descriptorType: descriptorTypes)
         {
-            evalImage(detectorType, descriptorType);        
+            evalImages(detectorType, descriptorType);        
         }
     }
     return 0;

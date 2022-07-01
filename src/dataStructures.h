@@ -30,6 +30,9 @@ public:
         }
         this->c.push_back(value);
     }
+    std::dequeue<typename T>::iterator end() {
+        return this->c.end();
+    }
 };
 
 #endif /* dataStructures_h */

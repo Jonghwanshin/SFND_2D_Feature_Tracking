@@ -44,13 +44,25 @@ Then, add *C:\vcpkg\installed\x64-windows\bin* and *C:\vcpkg\installed\x64-windo
 
 ## Writeup
 
+I have implemented feature tracking using various keypoint detectors and descriptors.
+Then, I compared each techniques for its performance and speed to get the most appropriate approach for given test images. 
+I described how I accomplished all given tasks below.
+
 ### MP.1 Databuffer implementation
 
-### MP.2 Keypoint dtection
+I implemented a ring buffer using `std::deque` since it has `O(1)` time complexity when inserting and removing element from each ends. Please refer `class RingBuffer` on `dataStructures.h` for the details.
+I made some changes on `MidTermProject_Camera_Student.cpp` to work with the new data structure.
+### MP.2 Keypoint Detection
 
-### MP.3 Keypoint descriptors
+I implemented keypoint detectors file `matching2D_Students.cpp` with 
+
+### MP.3 Keypoint Removal
+
+
 
 ### MP.4 Keypoint Descriptors
+
+
 
 ### MP.5 Performance Evaluation
 
