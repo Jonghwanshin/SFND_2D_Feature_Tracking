@@ -24,7 +24,6 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
         }
         else if(descriptorType.compare("DES_HOG") == 0) 
         {
-            //const cv::Ptr<cv::flann::IndexParams>& indexParams = cv::makePtr<cv::flann::LshIndexParams>(12, 20, 2);
             matcher = cv::FlannBasedMatcher::create();
         }
         else
@@ -76,9 +75,13 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
 
         extractor = cv::BRISK::create(threshold, octaves, patternScale);
     }
-    else if (descriptorType.compare("FAST") == 0)
+    else if (descriptorType.compare("BRIEF") == 0) 
     {
-        extractor = cv::FastFeatureDetector::create();
+        extractor = cv::xfeatures2d::BriefDescriptorExtractor::create();
+    }
+    else if (descriptorType.compare("FREAK") == 0)
+    {
+        extractor = cv::xfeatures2d::FREAK::create();
     }
     else if (descriptorType.compare("ORB") == 0)
     {
@@ -94,14 +97,10 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
     }
     else
     {
-        throw invalid_argument("Descriptor Name" + descriptorType + " Invalid, Available Detectors: FAST, BRISK, ORB, AKAZE, SIFT");
+        throw invalid_argument("Descriptor Name" + descriptorType + " Invalid, Available Detectors: BRIEF, FREAK, BRISK, ORB, AKAZE, SIFT");
     }
 
-    // perform feature description
-    double t = (double)cv::getTickCount();
     extractor->compute(img, keypoints, descriptors);
-    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-    cout << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
 }
 
 // Detect keypoints in image using the traditional Shi-Thomasi detector
@@ -150,6 +149,7 @@ void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool
     int blockSize = 2; // for every pixel, a blockSize × blockSize neighborhood is considered
     int apertureSize = 3; // aperture parameter for Sobel operator (must be odd)
     int minResponse = 100; // minimum value for a corner in the 8bit scaled response matrix
+    double maxOverlap = 0.0;
     double k = 0.04; // Harris parameter (see equation for details)
 
     // Detect Harris corners and normalize output
@@ -164,30 +164,33 @@ void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool
     // each maximum. The resulting coordinates shall be stored in a list of keypoints 
     // of the type `vector<cv::KeyPoint>`.
     // loop over all pixels in the corner image
-
-    // define size of sliding window
-    int sw_size = 7;                  // should be odd so we can center it on a pixel and have symmetry in all directions
-    int sw_dist = floor(sw_size / 2); // number of pixels to left/right and top/down to investigate
     
-    for (int r = sw_dist; r < dst_norm.rows - sw_dist - 1; r++) // rows
+    for (int r = 0; r < dst_norm.rows; r++) // rows
     {
-        for (int c = sw_dist; c < dst_norm.cols - sw_dist - 1; c++) // cols
+        for (int c = 0; c < dst_norm.cols; c++) // cols
         {
-            // loop over all pixels within sliding window around the current pixel
-            unsigned int max_val{0}; // keeps track of strongest response
-            for (int rs = r - sw_dist; rs <= r + sw_dist; rs++)
+            // loop over all pixels within sliding window around the current pixel 
+            int response = (int)round(dst_norm.at<float>(r, c));
+            if(response < minResponse) continue;
+
+            cv::KeyPoint kp(cv::Point2f(c, r), 2 * apertureSize, response);
+
+            bool isOverlapped = false;
+            for (auto& kpCmp : keypoints)
             {
-                for (int cs = c - sw_dist; cs <= c + sw_dist; cs++)
+                if(cv::KeyPoint::overlap(kp, kpCmp) > maxOverlap)
                 {
-                    // check wether max_val needs to be updated
-                    unsigned int new_val = dst_norm.at<unsigned int>(rs, cs);
-                    max_val = max_val < new_val ? new_val : max_val;
+                    isOverlapped = true;
+                    if(kp.response > kpCmp.response)
+                    {
+                        kpCmp = kp;
+                        break;
+                    }
                 }
             }
 
-            // check wether current pixel is local maximum
-            if (dst_norm.at<unsigned int>(r, c) == max_val)
-                keypoints.push_back(cv::KeyPoint(cv::Point2f(c, r), max_val));
+            if (!isOverlapped)
+                keypoints.push_back(kp);
         }
     }
 }
@@ -221,7 +224,11 @@ void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std:
         throw invalid_argument("Detector Name" + detectorType + "Invalid, Available Detectors: FAST, BRISK, ORB, AKAZE, SIFT");
     }
 
+    //double t = (double)cv::getTickCount();
     extractor->detect(img, keypoints);
+    // t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+    // cout << detectorType << " detector took " << 1000 * t / 1.0 << " ms" << endl;
+    // cout << "Keypoints found: " << keypoints.size() << " points" << endl;
 
     if(bVis) 
     {

@@ -9,7 +9,6 @@
 struct DataFrame { // represents the available sensor information at the same time instance
     
     cv::Mat cameraImg; // camera image
-    
     std::vector<cv::KeyPoint> keypoints; // 2D keypoints within camera image
     cv::Mat descriptors; // keypoint descriptors
     std::vector<cv::DMatch> kptMatches; // keypoint matches between previous and current frame
@@ -30,8 +29,11 @@ public:
         }
         this->c.push_back(value);
     }
-    std::dequeue<typename T>::iterator end() {
+    typename std::deque<T>::iterator end() {
         return this->c.end();
+    }
+    size_t size() {
+        return c.size();
     }
 };
 
