@@ -24,7 +24,7 @@ public:
         this->c.clear();
     }
     void push(const T& value) {
-        if(this->c.size() > this->maxSize) {
+        if(this->c.size() >= this->maxSize) {
             this->c.pop_front();
         }
         this->c.push_back(value);

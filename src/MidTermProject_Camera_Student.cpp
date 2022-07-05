@@ -197,7 +197,7 @@ int evalImages(string detectorType, string descriptorType, bool bVis, bool bSave
             
             string matcherType = "MAT_BF";        // MAT_BF, MAT_FLANN
             string descriptorClass = "DES_BINARY"; // DES_BINARY, DES_HOG
-            string selectorType = "SEL_NN";       // SEL_NN, SEL_KNN
+            string selectorType = "SEL_KNN";       // SEL_NN, SEL_KNN
 
             if(descriptorType.compare("SIFT") == 0)
                 descriptorClass = "DES_HOG";

@@ -48,25 +48,76 @@ I have implemented feature tracking using various keypoint detectors and descrip
 Then, I compared each techniques for its performance and speed to get the most appropriate approach for given test images. 
 I described how I accomplished all given tasks below.
 
+### For readers
+I changed the code structure in `MidTermProject_Camera_Student.cpp` to remove redundant code. I moved the whole logic to the `evalImages()` function to reuse the code for performance evaluation.
+Please refer `evalImages()` function to see all project rubics are achieved.
+
 ### MP.1 Databuffer implementation
 
-I implemented a ring buffer using `std::deque` since it has `O(1)` time complexity when inserting and removing element from each ends. Please refer `class RingBuffer` on `dataStructures.h` for the details.
+I implemented a ring buffer using `std::deque` since it has `O(1)` time complexity when inserting and removing element from each ends. 
+Please refer `class RingBuffer` on `dataStructures.h` for the details.
 I made some changes on `MidTermProject_Camera_Student.cpp` to work with the new data structure.
+
 ### MP.2 Keypoint Detection
 
-I implemented keypoint detectors file `matching2D_Students.cpp` with 
+I implemented keypoint detectors in file `matching2D_Students.cpp`.
+For Harris detector, I implemented a non-maximum suppression(NMS) algorithms for detected keypoints in `detKeypointsHarris()` function.
+For FAST, BRISK, ORB, AKAZE, SIFT detectors, I implemented each detectors in `detKeypointsModern()` function.
 
 ### MP.3 Keypoint Removal
 
-
+I used a OpenCV builtin function `contains()` for this task.
+Please refer L131-L145 in `MidTermProject_Camera_Student.cpp`.
 
 ### MP.4 Keypoint Descriptors
 
+I implemented BRISK, BRIEF, FREAK, ORB, AKAZE, SIFT keypoint descriptors.
+Please refer `descKeypoints()` function in `matching2D_Students.cpp`.
+
+### MP.5 Descriptor Matching
+
+I implemented FLANN based matcher for matching descriptors in two consecutive images.
+Note that SIFT desciptor is a histogram of gradiant(HoG) descriptor therefore I added a condition in L202-203 in `MidTermProject_Camera_Student.cpp`.
+Please refer `matchDescriptors()` function in `matching2D_Students.cpp`.
+
+### MP.6 Descriptor Distance Ratio
+
+I implemented k-NN match using `knnMatch()` function in OpenCV library.
+I tested some numbers for get the best `minDiscDistRatio` and `0.8` seems to the best choice.
 
 
-### MP.5 Performance Evaluation
+I implemented a function(`evalPerformance()`) for performance evaluation for all available detectors and descriptors. The function evaluates all images and measures the execution time and how many keypoints are found and matched. Then, I created a pivot table based on evaluation result.
+See the below table for evaluation result.
 
-for all detectors, distribution of their neighborhood size
-number of matched keypoints for all 10 images using all possible combinations of detectors and descriptors
-BF approach @ descriptor distance ratio 0.8
-log the time it takes for keypoint dtection and descriptor extraction
+![Performance Evaluation](images/PerformanceEvaluation.png)
+### MP.7 Performance Evaluation 1
+
+I counted the number of keypoints found and neighborhood size of all available detectors in `result.csv`. The above table also shows the summarized results of this task. Based on the average and standard deviation of each detector, I could determine the best three detectors in below:
+
+1. FAST 
+  - Keypoints Detected: Avg: 409.4, StdDev: 12.997
+  - Neighbothood Size: Avg: 7.0, StdDev: 0.0 (it's fixed!)
+2. BRISK
+  - Keypoints Detected: Avg: 276.2, StdDev: 12.630
+  - Neighbothood Size: Avg: 21.942, StdDev: 0.718 
+3. AKAZE
+  - Keypoints Detected: Avg: 167.0, StdDev: 8.144
+  - Neighbothood Size: Avg: 7.693, StdDev: 0.145
+
+### MP.8 Performance Evaluation 2
+
+I counted the number of matched descriptors of all combinations of available detectors and descriptors in `result.csv`. The above table also shows the summarized results of this task. Based on the average and standard deviation of each matches, I could determine the best three descriptors with FAST detectors in below:
+
+1. BRIEF (Avg Matches: 314.556, StdDev: 18.146)
+2. SIFT (Avg Matches: 309.111, StdDev: 12.484)
+3. ORB (Avg Matches: 306.889, StdDev: 11.911)
+### MP.9 Performance Evaluation 3
+
+I measured execution time for all detectors and descriptors on all given images and selected best feature tracker based on how many keypoints are found/matched and execution time.
+The top 3 detector/descriptor combination as below:
+
+1. FAST-BRIEF: Avg Keypoints found - 409.4, Avg Keypoints matched - 314.556, Avg Execution Time: 1.337 + 0.522 = 1.859ms 
+2. FAST-ORB: Avg Keypoints found - 409.4, Avg Keypoints matched - 309.556, Avg Execution Time: 1.337 + 0.825 = 2.162ms 
+3. FAST-SIFT: Avg Keypoints found - 409.4, Avg Keypoints matched - 306.889, Avg Execution Time: 1.337 + 8.612 = 9.949ms 
+
+* Note that the execution time of detector is assumed to have lowest average detection time since all three detectors are same.
