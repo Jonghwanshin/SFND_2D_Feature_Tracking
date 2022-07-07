@@ -1,15 +1,15 @@
 # SFND 2D Feature Tracking
 
-<img src="images/keypoints.png" width="820" height="248" />
+This project detects and tracks visual features from given set of images, especially the car in front of the camera. Detecting and tracking visual features is one of the fundamental building block of a collision detection system. I implemented all project rubics which consists of four major parts:
 
-The idea of the camera course is to build a collision detection system - that's the overall goal for the Final Project. As a preparation for this, you will now build the feature tracking part and test various detector / descriptor combinations to see which ones perform best. This mid-term project consists of four parts:
+* First, I set up data structures and putting everything into a ring buffer to optimize memory load. 
+* Second, I integrated several keypoint detectors such as HARRIS, FAST, BRISK and SIFT and compare them with regard to number of keypoints and speed. 
+* Third, I focused on descriptor extraction and matching using brute force and also the FLANN approach we discussed in the previous lesson. 
+* Finally, I tested the various algorithms in different combinations and compare them with regard to some performance measures. 
 
-* First, you will focus on loading images, setting up data structures and putting everything into a ring buffer to optimize memory load. 
-* Then, you will integrate several keypoint detectors such as HARRIS, FAST, BRISK and SIFT and compare them with regard to number of keypoints and speed. 
-* In the next part, you will then focus on descriptor extraction and matching using brute force and also the FLANN approach we discussed in the previous lesson. 
-* In the last part, once the code framework is complete, you will test the various algorithms in different combinations and compare them with regard to some performance measures. 
+You can see the results of best combinations of detector/descriptors below.
 
-See the classroom instruction and code comments for more details on each of these parts. Once you are finished with this project, the keypoint matching part will be set up and you can proceed to the next lesson, where the focus is on integrating Lidar points and on object detection using deep-learning. 
+![Result](images/Result.gif)
 
 ## Dependencies for Running Locally
 1. cmake >= 2.8
@@ -85,7 +85,6 @@ Please refer `matchDescriptors()` function in `matching2D_Students.cpp`.
 I implemented k-NN match using `knnMatch()` function in OpenCV library.
 I tested some numbers for get the best `minDiscDistRatio` and `0.8` seems to the best choice.
 
-
 I implemented a function(`evalPerformance()`) for performance evaluation for all available detectors and descriptors. The function evaluates all images and measures the execution time and how many keypoints are found and matched. Then, I created a pivot table based on evaluation result.
 See the below table for evaluation result.
 
@@ -120,4 +119,4 @@ The top 3 detector/descriptor combination as below:
 2. FAST-ORB: Avg Keypoints found - 409.4, Avg Keypoints matched - 309.556, Avg Execution Time: 1.337 + 0.825 = 2.162ms 
 3. FAST-SIFT: Avg Keypoints found - 409.4, Avg Keypoints matched - 306.889, Avg Execution Time: 1.337 + 8.612 = 9.949ms 
 
-* Note that the execution time of detector is assumed to have lowest average detection time since all three detectors are same.
+* Note that the execution time of detector is assumed to have lowest average detection time since the detector of all cases are the same.
